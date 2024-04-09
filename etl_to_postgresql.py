@@ -1,13 +1,18 @@
+import json
+
 import boto3
 import pandas as pd
 import psycopg2
 
-from botocore.exceptions import ClientError
-from sqlalchemy import create_engine
+from io import StringIO
 
+from botocore.exceptions import ClientError
 
 S3_BUCKET = "arapbi"
 S3_FOLDER = "polygon/tickers/"
+DATABASE_URI = (
+    "arapbi20240409222908967700000003.c368i8aq0xtu.us-west-2.rds.amazonaws.com:5432"
+)
 
 s3 = boto3.resource("s3")
 my_bucket = s3.Bucket(S3_BUCKET)
@@ -43,24 +48,32 @@ object_list = []
 for obj in my_bucket.objects.filter(Prefix=S3_FOLDER):
     object_list.append(obj)
 
+secret = get_secret()
 secret = json.loads(secret)
 user = secret.get("username")
 password = secret.get("password")
 
-conn_string = f"postgresql://{user}:{password}@arapbi20240406153310133100000001.c368i8aq0xtu.us-west-2.rds.amazonaws.com:5432/arapbi"
-db = create_engine(conn_string)
-conn = db.connect()
 
+conn_string = f"postgresql://{user}:{password}@{DATABASE_URI}/arapbi"
 
-for i, file in enumerate(object_list):
+pg_conn = psycopg2.connect(conn_string, database="arapbi")
+for i, file in enumerate(object_list[1:-1]):
+    cur = pg_conn.cursor()
+    output = StringIO()
+
     obj = object_list[i + 1].key
     bucket_name = object_list[i + 1].bucket_name
-    df = pd.read_csv(f"s3a://{bucket_name}/{obj}").drop("Unnamed: 0", axis=1)
-    df.to_sql("tickers", con=conn, if_exists="append", index=False)
-    conn.commit()
-    n_records = str(df.count())
-    print(f"loaded {n_records} records from s3a://{bucket_name}/{obj}")
 
+    df = pd.read_csv(f"s3a://{bucket_name}/{obj}").drop("Unnamed: 0", axis=1)
+    output.write(df.to_csv(index=False, header=False, na_rep="NaN"))
+    output.seek(0)
+
+    cur.copy_expert(f"COPY tickers FROM STDIN WITH CSV HEADER", output)
+    pg_conn.commit()
+    cur.close()
+    n_records = str(len(df))
+    print(f"loaded {n_records} records from s3a://{bucket_name}/{obj}")
+pg_conn.close()
 
 '''
 

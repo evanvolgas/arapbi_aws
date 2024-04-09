@@ -12,13 +12,17 @@ resource "aws_s3_bucket" "arapbi" {
   tags = {
     Name = "ARAPBI"
   }
+  lifecycle {
+    prevent_destroy = true
+  }
+
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "arapbi" {
   bucket = aws_s3_bucket.arapbi.id
 
   rule {
-    id     = "Lifecycle"
+    id     = "Arapbi Athena Results Lifecycle"
     status = "Enabled"
 
     filter {
@@ -65,7 +69,7 @@ resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.arapbi.id
 
   tags = {
-    Name = "Project VPC IG"
+    Name = "Arapbi VPC IG"
   }
 }
 
@@ -89,7 +93,7 @@ resource "aws_route_table_association" "public_subnet_asso" {
 }
 
 resource "aws_security_group" "bastion" {
-  name   = var.security_group_name
+  name   = "Bastion host"
   vpc_id = aws_vpc.arapbi.id
   ingress {
     from_port   = 8080
@@ -168,7 +172,6 @@ resource "aws_db_subnet_group" "arapbi" {
   }
 }
 
-
 resource "aws_db_instance" "arapbi" {
   identifier_prefix      = "arapbi"
   engine                 = "postgres"
@@ -186,5 +189,30 @@ resource "aws_db_instance" "arapbi" {
   tags = {
     Name = "ARAPBI"
     Tag  = "Managed by Terraform"
+  }
+}
+
+resource "aws_security_group" "elasticsearch" {
+  name   = "elasticsearch"
+  vpc_id = aws_vpc.arapbi.id
+  ingress {
+    from_port   = 9200
+    to_port     = 9200
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    cidr_blocks = [
+      "0.0.0.0/0"
+    ]
+    from_port = 22
+    to_port   = 22
+    protocol  = "tcp"
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
