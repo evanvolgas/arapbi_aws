@@ -17,7 +17,6 @@ DATABASE_URI = (
 s3 = boto3.resource("s3")
 my_bucket = s3.Bucket(S3_BUCKET)
 
-
 # Use this code snippet in your app.
 # If you need more information about configurations
 # or implementing the sample code, visit the AWS docs:
@@ -53,10 +52,9 @@ secret = json.loads(secret)
 user = secret.get("username")
 password = secret.get("password")
 
-
 conn_string = f"postgresql://{user}:{password}@{DATABASE_URI}/arapbi"
-
 pg_conn = psycopg2.connect(conn_string, database="arapbi")
+
 for i, file in enumerate(object_list[1:-1]):
     cur = pg_conn.cursor()
     output = StringIO()
@@ -114,3 +112,15 @@ pg_conn.commit()
 cur.close()
 pg_conn.close()
 '''
+
+
+pg_conn = psycopg2.connect(conn_string, database="arapbi")
+cursor = pg_conn.cursor()
+
+sql = """select date, count(*) from tickers group by 1 order by 1 desc limit 10 """
+
+cursor.execute(sql)
+cursor.fetchall()
+
+pg_conn.commit()
+pg_conn.close()

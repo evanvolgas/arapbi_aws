@@ -65,18 +65,23 @@ with ThreadPoolExecutor(max_workers=WORKERS) as executor:
 
 # Adding the partition to Athena
 athena_config = {
-    "OutputLocation": "s3://" + S3_BUCKET + "/athena_results",
+    "OutputLocation": f"s3://{S3_BUCKET}/athena_results/Unsaved/{today[:4]}/{today[5:7]}/{today[8:10]}/",
     "EncryptionConfiguration": {"EncryptionOption": "SSE_S3"},
 }
 
 # Query Execution Parameters
 sql = "MSCK REPAIR TABLE tickers"
-sql = "SELECT dt, count(*) from tickers group by 1"
+# sql = "SELECT dt, count(*) from tickers group by 1"
 context = {"Database": "arapbi"}
 
 athena_client = boto3.client("athena")
 athena_client.start_query_execution(
     QueryString=sql, QueryExecutionContext=context, ResultConfiguration=athena_config
+)
+
+
+df = wr.athena.read_sql_query(
+    sql="SELECT max(cast(date as date)) as max_dt FROM tickers", database="arapbi"
 )
 
 

@@ -96,12 +96,6 @@ resource "aws_security_group" "bastion" {
   name   = "Bastion host"
   vpc_id = aws_vpc.arapbi.id
   ingress {
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
     cidr_blocks = [
       "0.0.0.0/0"
     ]
@@ -154,19 +148,11 @@ resource "aws_security_group" "database" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 }
 
 resource "aws_db_subnet_group" "arapbi" {
   name       = "arapbi"
   subnet_ids = aws_subnet.private_subnets.*.id
-
-
   tags = {
     Name = "ARAPBI"
   }
@@ -196,23 +182,59 @@ resource "aws_security_group" "elasticsearch" {
   name   = "elasticsearch"
   vpc_id = aws_vpc.arapbi.id
   ingress {
-    from_port   = 9200
-    to_port     = 9200
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  ingress {
-    cidr_blocks = [
-      "0.0.0.0/0"
+}
+
+resource "aws_iam_user" "arapbi" {
+  name = "arapbi"
+}
+
+resource "aws_iam_user_ssh_key" "arapbi" {
+  username   = aws_iam_user.arapbi.name
+  encoding   = "SSH"
+  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCzoqADrTAICNuay1UFVH4oQuCDnz46G/wK3OKqeex6e9uLVA1SeoiGnPnsl4bRSRfXGTgpAtXIjlww/ICYQUtTiZZnGV0e8Eq9QUlI72rd3zH8wCMxnUkDi27Dg2opsMeFQZKIm/EwnllhAxr7vJn9F9NWfJoBkisSb7cqKGmt6q1T+qQ1IX7JHdnK8JD0Ao/z3PARGOPZXQ5POHQZGgbEDxhx4m5gfhYomfZBhmFsVdKxKCIV7/5/cMd85tlZxI4eo4BUwl+6DRuVf23qccICN8zk5Dq4h7HuU7n/LjI0Dm74RuqsXhbLdEzZv3KSpiWUjCBA8Zu5mil35E0o/UzvOq/VMNYCV94OpStXsLyGL6SsjvcvFllubtyHKXYlh34Xq874YA353B4hdUPXQ3clYU4UJ2FCj93OPZmBr9p6+vORkwiSmdPHS2E9cYQ7kj+DpHlhlHZvRCNoto1mu5lOANweYsP9GIfTXsuQ7Pnue1UV6iAgdgNlT5CVpW1/gIBVqCYKD5lZ68MpER4THEi6j47idBFH8ikt+cY8aSJVVWbkpfqxD0jwq6Y5USHQ0tG1N5faoqzvpZgeda9pP5xxSvGXydDIez7CYdjJbcqJ5m/4vdSPnnshaCZ8YGnbAvGRtF3YW+MfIRdIyqYt90cTj/khUa1QPhCX8RCEwCWISQ== evan.volgas@gmail.com"
+}
+
+resource "aws_iam_group" "arapbi_developers" {
+  name = "arapbi_developers"
+}
+
+resource "aws_iam_group_membership" "arapbi_developers" {
+  name = "arapbi_developers_members"
+  group = aws_iam_group.arapbi_developers.name
+
+  users = [
+    aws_iam_user.arapbi.name,
+  ]
+}
+
+
+resource "aws_iam_group_policy" "arapbi_developers" {
+  name  = "arapbi_developers_policy"
+  group = aws_iam_group.arapbi_developers.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "athena:*",
+          "ec2:*",
+          "ec2-instance-connect:*",
+          "es:*",
+          "glue:*",
+          "iam:*",
+          "rds:*",
+          "s3:*",
+          "secretsmanager:*"
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
     ]
-    from_port = 22
-    to_port   = 22
-    protocol  = "tcp"
-  }
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  })
 }
