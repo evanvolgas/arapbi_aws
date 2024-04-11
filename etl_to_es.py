@@ -8,7 +8,6 @@ import pandas as pd
 from opensearchpy import OpenSearch, RequestsHttpConnection
 
 # Currently this boils the ocean on the index refresh
-# TODO: make it incremental and intelligent
 
 
 def rec_to_actions(df):
@@ -55,9 +54,9 @@ if __name__ == "__main__":
     dates = [str(d)[:10] for d in pd.date_range(max_date, today)][1:]
     obj_list = [f"s3://arapbi/polygon/tickers/{d}/{d}.csv" for d in dates]
 
-    index_body = {"settings": {"index": {"number_of_shards": 2}}}
+    # index_body = {"settings": {"index": {"number_of_shards": 2}}}
     # response = client.indices.delete(INDEX_NAME)
-    response = client.indices.create(INDEX_NAME, body=index_body)
+    # response = client.indices.create(INDEX_NAME, body=index_body)
 
     for obj in obj_list:
         if obj:

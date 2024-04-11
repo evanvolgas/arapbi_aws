@@ -6,7 +6,6 @@ import awswrangler as wr
 import pandas as pd
 
 from concurrent.futures import ThreadPoolExecutor
-from threading import Lock
 
 from polygon import RESTClient
 
@@ -30,7 +29,7 @@ dates = [str(d)[:10] for d in pd.date_range(max_stored_date, today)]
 # Scrape Polygon's website for stocks history for every ticker, make a dataframe out of the result,
 # and append that dataframe to a list of all dataframes for all stocks. It will be concatenated to one dataframe below.
 def fetch_stock_history(d):
-    print(f"Fetching data for d")
+    print(f"Fetching data for {d}")
     aggs = []
     for a in polygon_client.get_grouped_daily_aggs(d):
         aggs.append(a)
