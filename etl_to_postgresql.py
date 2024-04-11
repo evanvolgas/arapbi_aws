@@ -8,6 +8,9 @@ from io import StringIO
 
 from botocore.exceptions import ClientError
 
+# Currently this boils the ocean on the table refresh
+# TODO: make it incremental and intelligent
+
 S3_BUCKET = "arapbi"
 S3_FOLDER = "polygon/tickers/"
 DATABASE_URI = (
@@ -16,11 +19,6 @@ DATABASE_URI = (
 
 s3 = boto3.resource("s3")
 my_bucket = s3.Bucket(S3_BUCKET)
-
-# Use this code snippet in your app.
-# If you need more information about configurations
-# or implementing the sample code, visit the AWS docs:
-# https://aws.amazon.com/developer/language/python/
 
 
 def get_secret(secret_name="prod/arapbi/database", region_name="us-west-2"):
@@ -35,26 +33,28 @@ def get_secret(secret_name="prod/arapbi/database", region_name="us-west-2"):
     try:
         get_secret_value_response = client.get_secret_value(SecretId=secret_name)
     except ClientError as e:
-        # For a list of exceptions thrown, see
-        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
         raise e
 
     secret = get_secret_value_response["SecretString"]
     return secret
 
 
+# Fetch all objects
 object_list = []
 for obj in my_bucket.objects.filter(Prefix=S3_FOLDER):
     object_list.append(obj)
 
+# Fetch secret
 secret = get_secret()
 secret = json.loads(secret)
 user = secret.get("username")
 password = secret.get("password")
 
+# Connect to Postgresql
 conn_string = f"postgresql://{user}:{password}@{DATABASE_URI}/arapbi"
 pg_conn = psycopg2.connect(conn_string, database="arapbi")
 
+# Upload all the CSVs to PG
 for i, file in enumerate(object_list[1:-1]):
     cur = pg_conn.cursor()
     output = StringIO()

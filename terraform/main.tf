@@ -212,7 +212,6 @@ resource "aws_iam_group_membership" "arapbi_developers" {
   ]
 }
 
-
 resource "aws_iam_group_policy" "arapbi_developers" {
   name  = "arapbi_developers_policy"
   group = aws_iam_group.arapbi_developers.name
@@ -223,6 +222,7 @@ resource "aws_iam_group_policy" "arapbi_developers" {
       {
         Action = [
           "athena:*",
+          "cluster:*",
           "ec2:*",
           "ec2-instance-connect:*",
           "es:*",
