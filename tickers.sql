@@ -17,3 +17,17 @@ WITH SERDEPROPERTIES ("separatorChar" = ",", "escapeChar" = "\\","skip.header.li
 LOCATION 's3://arapbi/polygon/tickers';
 
 MSCK REPAIR TABLE tickers;
+
+
+
+create view stg_tickers as (
+select
+    ticker,
+    try_cast(open as double) as open,
+    try_cast(close as double) as close,
+    try_cast(volume_weighted_average_price as double) as volume_weighted_average_price,
+    try_cast(volume as bigint) as volume,
+    try_cast(transactions as bigint) as transactions,
+    try_cast(dt as date) as date
+FROM tickers
+);

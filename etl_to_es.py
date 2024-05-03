@@ -6,6 +6,7 @@ import os
 import pandas as pd
 
 from opensearchpy import OpenSearch, RequestsHttpConnection
+from opensearchpy.client.cat import CatClient
 
 # Currently this boils the ocean on the index refresh
 
@@ -59,7 +60,12 @@ if __name__ == "__main__":
     # response = client.indices.create(INDEX_NAME, body=index_body)
 
     for obj in obj_list:
-        if obj:
+        try:
             file = obj
             df = pd.read_csv(file)
             client.bulk(rec_to_actions(df), request_timeout=600)
+        except:
+            pass
+
+cat_client = CatClient(client)
+cat_client.aliases()
